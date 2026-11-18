@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>タスク</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#2f6fde">
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--line:#e3e6ea;--text:#1f2328;--sub:#6a737d;--accent:#2f6fde;--red:#d73a49;--orange:#e36209}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:8px 12px}
+.wrap{max-width:760px;margin:0 auto}
+.top{display:flex;align-items:center;gap:8px}
+.top h1{font-size:17px;margin:0;flex:1}
+.sync{width:9px;height:9px;border-radius:50%;background:#2da44e}
+.sync.busy{background:var(--orange)}
+.icon-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;font-size:13px;color:var(--text)}
+.add{display:flex;gap:6px;margin-top:8px}
+.add input{flex:1;min-width:0;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:16px}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:0 14px;font-size:15px}
+.bar{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.bar input[type=date]{grid-column:1/-1;padding:6px;border:1px solid var(--line);border-radius:8px;font-size:14px;background:#fff;color:var(--text)}
+.bar select{min-width:0;padding:6px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px;color:var(--text)}
+main{max-width:760px;margin:0 auto;padding:8px 8px 90px}
+body.selmode main{padding-bottom:150px}
+body.selmode #toast{bottom:80px}
+ul{list-style:none;margin:0;padding:0}
+li.task{display:flex;align-items:flex-start;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 8px;margin-bottom:6px}
+.handle{cursor:grab;color:#b0b6bd;padding:0 4px;touch-action:none;user-select:none;-webkit-user-select:none;font-size:20px;line-height:20px}
+.nodrag .handle{visibility:hidden}
+.chk{width:20px;height:20px;margin:0 2px;flex-shrink:0}
+.body{flex:1;min-width:0;cursor:pointer}
+.title{word-break:break-word;line-height:1.45}
+.title a,.memo a{color:var(--accent);text-decoration:none;font-size:12px;background:#eef3fc;border-radius:4px;padding:1px 5px;margin:0 2px;white-space:nowrap}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px;align-items:center;font-size:12px}
+.pri{font-weight:700;border-radius:4px;padding:1px 6px;color:#fff}
+.pA{background:#d73a49}.pB{background:#e36209}.pC{background:#2f6fde}.pD{background:#8b949e}
+.who{background:#f0f2f5;border-radius:10px;padding:1px 8px}
+.due{color:var(--sub)}.due.over{color:var(--red);font-weight:700}.due.today{color:var(--orange);font-weight:700}
+.st{border:0;border-radius:10px;padding:2px 8px;font-size:12px;appearance:none;-webkit-appearance:none;color:var(--text)}
+.st-未着手{background:#eef0f2}.st-進行中{background:#dbeafe}.st-依頼済{background:#ede4fb}.st-要確認{background:#ffe8cc}.st-作業{background:#dcf5e3}
+.rep{color:var(--sub)}
+.cw{background:#fff1e6;color:#c24e00;border-radius:4px;padding:1px 6px;font-weight:700}
+.memo{color:var(--sub);font-size:12px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+li.done{opacity:.55}
+li.done .title{text-decoration:line-through}
+.sortable-ghost{opacity:.35}
+#empty{text-align:center;color:var(--sub);padding:40px 0}
+.icon-btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sortsave{grid-column:1/-1;border:1px dashed var(--accent);background:#fff;color:var(--accent);border-radius:8px;padding:6px;font-size:13px}
+.sel{width:20px;height:20px;margin:0 2px;flex-shrink:0;accent-color:var(--accent)}
+li.task.picked{border-color:var(--accent);background:#f3f7ff}
+.selecting .handle{display:none}
+#selAllRow{display:none;align-items:center;gap:8px;background:#eef3fc;border:1px solid var(--accent);border-radius:10px;padding:10px 8px;margin-bottom:6px;font-size:14px;font-weight:700;cursor:pointer;user-select:none}
+body.selmode #selAllRow{display:flex}
+#selAllRow input{width:20px;height:20px;margin:0 2px;accent-color:var(--accent)}
+#selbar{position:fixed;left:0;right:0;bottom:0;z-index:15;background:#fff;border-top:1px solid var(--line);box-shadow:0 -2px 8px rgba(0,0,0,.06);padding:8px 12px;display:none}
+#selbar.show{display:block}
+#selbar .in{max-width:760px;margin:0 auto;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#selbar .cnt{font-size:14px;font-weight:700;margin-right:auto}
+.quick-dates{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#24292f;color:#fff;border-radius:8px;padding:10px 14px;display:none;gap:14px;align-items:center;z-index:30;max-width:92vw;font-size:14px}
+#toast.show{display:flex}
+#toast button{background:none;border:0;color:#79b8ff;font-weight:700;font-size:14px;padding:0}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.modal.open{display:flex}
+.sheet{background:#fff;width:100%;max-width:560px;border-radius:14px 14px 0 0;padding:16px;max-height:92vh;overflow:auto}
+@media(min-width:600px){.modal{align-items:center}.sheet{border-radius:14px}}
+.sheet h2{font-size:16px;margin:0 0 12px}
+.f{margin-bottom:10px}
+.f label{display:block;font-size:12px;color:var(--sub);margin-bottom:3px}
+.f input,.f select,.f textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font-size:16px;font-family:inherit;background:#fff;color:var(--text)}
+.row2{display:flex;gap:8px}.row2 .f{flex:1;min-width:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{border:1px solid var(--line);background:#f6f8fa;border-radius:14px;padding:4px 10px;font-size:13px;color:var(--text)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.actions{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-top:14px}
+.danger{background:none;border:1px solid var(--red);color:var(--red);border-radius:8px;padding:8px 12px;font-size:14px}
+.ghost{background:none;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px;color:var(--text)}
+.plist li{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);background:#fff}
+.plist li .pname{flex:1;min-width:0}
+.plist .pedit{color:var(--accent)!important}
+.plist .prename{flex:1;min-width:0;padding:6px 8px;border:1px solid var(--accent);border-radius:6px;font-size:16px}
+.plist .phandle{cursor:grab;color:#b0b6bd;padding:0 6px;touch-action:none;user-select:none;-webkit-user-select:none;font-size:20px;line-height:20px}
+.plist button{background:none;border:0;color:var(--red);font-size:13px}
+.dlist li{display:flex;gap:8px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--line)}
+.dlist .dbody{flex:1;min-width:0}
+.dlist .dtitle{word-break:break-word;line-height:1.45}
+.dlist .dmeta{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;font-size:12px;color:var(--sub)}
+.dlist .reopen{flex-shrink:0;border:1px solid var(--accent);color:var(--accent);background:#fff;border-radius:8px;padding:5px 10px;font-size:13px}
+.hint{font-size:12px;color:var(--sub);line-height:1.6}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <h1 id="hTitle" title="タップで再読み込み">タスク</h1>
+      <span id="sync" class="sync" title="保存状態"></span>
+      <button class="icon-btn" id="btnPeople">相手</button>
+      <button class="icon-btn" id="btnSelect">選択</button>
+      <button class="icon-btn" id="btnDone">完了済</button>
+      <button class="icon-btn" id="btnImport">取込</button>
+      <button class="icon-btn" id="btnSetup" title="接続設定">⚙</button>
+    </div>
+    <div class="add">
+      <input id="quick" placeholder="例）中川：垂水11月シフト確認" enterkeyhint="done" autocomplete="off">
+      <button class="btn" id="btnAdd">追加</button>
+    </div>
+    <div class="bar">
+      <select id="fWho"></select>
+      <select id="fStatus">
+        <option value="__all">全ステータス</option>
+        <option>未着手</option><option>進行中</option><option>依頼済</option><option>要確認</option><option>作業</option>
+      </select>
+      <select id="fDue">
+        <option value="__all">全期限</option>
+        <option value="over">期限切れ</option>
+        <option value="today">今日</option>
+        <option value="untilToday">今日まで（期限切れ含む）</option>
+        <option value="tomorrow">明日</option>
+        <option value="week">7日以内</option>
+        <option value="dated">期限あり</option>
+        <option value="none">期限なし</option>
+        <option value="pick">日付を指定…</option>
+      </select>
+      <select id="sortBy">
+        <option value="manual">手動順</option>
+        <option value="due">期限順</option>
+        <option value="pri">優先度順（A→D）</option>
+        <option value="who">依頼相手順</option>
+      </select>
+      <input type="date" id="fDate" hidden>
+      <button class="sortsave" id="btnClear" hidden>絞り込みを解除して全件表示</button>
+      <button class="sortsave" id="btnSortSave" hidden>この並び順を「手動順」として保存</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <label id="selAllRow"><input type="checkbox" id="selAllChk"><span id="selAllLabel">表示中のタスクをすべて選択</span></label>
+  <ul id="list"></ul>
+  <div id="empty" hidden>タスクはありません</div>
+</main>
+
+<div id="selbar"><div class="in">
+  <span class="cnt" id="selCount">0件選択</span>
+  <button class="ghost" id="selNone">解除</button>
+  <button class="btn" id="selDue" style="padding:8px 14px">期限を変更</button>
+  <button class="ghost" id="selExit">終了</button>
+</div></div>
+
+<!-- 期限の一括変更 -->
+<div class="modal" id="mBulk"><div class="sheet">
+  <h2>期限をまとめて変更 <span class="hint" id="bCount"></span></h2>
+  <div class="f"><label>日付を指定</label><input type="date" id="bDate"></div>
+  <div class="quick-dates">
+    <button type="button" class="chip" data-set="today">今日</button>
+    <button type="button" class="chip" data-set="tomorrow">明日</button>
+    <button type="button" class="chip" data-set="after2">明後日</button>
+    <button type="button" class="chip" data-set="nextmon">来週月曜</button>
+    <button type="button" class="chip" data-set="none">期限なしにする</button>
+  </div>
+  <label class="hint">今の期限からずらす（期限なしのタスクは今日から）</label>
+  <div class="quick-dates">
+    <button type="button" class="chip" data-shift="1">＋1日</button>
+    <button type="button" class="chip" data-shift="2">＋2日</button>
+    <button type="button" class="chip" data-shift="7">＋1週間</button>
+    <button type="button" class="chip" data-shift="-1">−1日</button>
+  </div>
+  <div class="actions"><button class="ghost" id="bCancel">キャンセル</button><button class="btn" id="bApply" style="padding:8px 18px">指定した日付にする</button></div>
+</div></div>
+
+<!-- 初回設定（GASのURLと合言葉は、この端末の中だけに保存） -->
+<div class="modal" id="mSetup"><div class="sheet">
+  <h2>初回設定</h2>
+  <p class="hint">GASの「ウェブアプリのURL（/exec で終わるもの）」と、setupApiKey を実行して出た合言葉を入れてください。この端末の中だけに保存され、GitHubには送られません。</p>
+  <div class="f"><label>ウェブアプリのURL</label><input id="sUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off"></div>
+  <div class="f"><label>合言葉</label><input id="sKey" type="password" autocomplete="off"></div>
+  <div class="actions"><button class="ghost" id="sCancel">キャンセル</button><button class="btn" id="sSave" style="padding:8px 18px">接続して保存</button></div>
+</div></div>
+
+<div id="toast"><span id="toastMsg"></span><button id="toastBtn"></button></div>
+<datalist id="dlPeople"></datalist>
+
+<!-- 編集 -->
+<div class="modal" id="mEdit"><div class="sheet">
+  <h2>タスクの編集</h2>
+  <div class="f"><label>タイトル</label><textarea id="eTitle" rows="2"></textarea></div>
+  <div class="f">
+    <label>依頼相手（タップで複数選べます／直接入力は「、」区切り）</label>
+    <input id="eWho" autocomplete="off" placeholder="例）中川、辻">
+    <div class="chips" id="eWhoChips"></div>
+  </div>
+  <div class="row2">
+    <div class="f"><label>期限</label><input type="date" id="eDue"></div>
+    <div class="f"><label>時刻（Chatworkに投稿）</label>
+      <div style="display:flex;gap:6px"><input type="time" id="eTime" step="300"><button type="button" class="ghost" id="eTimeClear" style="flex-shrink:0">消す</button></div>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="f"><label>優先度</label>
+      <select id="ePri"><option value="">なし</option><option>A</option><option>B</option><option>C</option><option>D</option></select>
+    </div>
+    <div class="f"><label>ステータス</label>
+      <select id="eStatus"><option>未着手</option><option>進行中</option><option>依頼済</option><option>要確認</option><option>作業</option><option>完了</option></select>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="f"><label>繰り返し</label>
+      <select id="eRepeat"><option>なし</option><option>毎日</option><option>平日</option><option>毎週</option><option>毎月</option></select>
+    </div>
+    <div class="f"></div>
+  </div>
+  <div class="f"><label>メモ</label><textarea id="eMemo" rows="4"></textarea></div>
+  <div class="actions">
+    <button class="danger" id="eDelete">削除</button>
+    <span><button class="ghost" id="eCancel">キャンセル</button> <button class="btn" id="eSave" style="padding:8px 18px">保存</button></span>
+  </div>
+</div></div>
+
+<!-- 依頼相手の管理 -->
+<div class="modal" id="mPeople"><div class="sheet">
+  <h2>依頼相手の登録</h2>
+  <div class="add" style="margin:0 0 8px">
+    <input id="pNew" placeholder="名前（「中川、辻、福田」でまとめて登録）" autocomplete="off">
+    <button class="btn" id="pAdd">追加</button>
+  </div>
+  <ul class="plist" id="pList"></ul>
+  <p class="hint">「修正」で名前を直せます。直した名前は、その人が依頼相手になっている既存のタスクにも反映されます。<br>左の ⠿ をドラッグすると並び順を変えられます。この順番が、プルダウン・編集画面のボタン・「依頼相手順」の並びに使われます。<br>登録した名前は、編集画面で選べるほか、入力欄に「名前：内容」と書くと自動で依頼相手に入ります。</p>
+  <div class="actions"><span></span><button class="btn" id="pClose" style="padding:8px 18px">閉じる</button></div>
+</div></div>
+
+<!-- 完了済み -->
+<div class="modal" id="mDone"><div class="sheet">
+  <h2>完了済みのタスク <span id="dCount" class="hint"></span></h2>
+  <div class="bar" style="margin:0 0 8px">
+    <input id="dQuery" type="search" placeholder="キーワードで検索" autocomplete="off"
+      style="padding:6px;border:1px solid var(--line);border-radius:8px;font-size:14px">
+    <select id="dWho"></select>
+  </div>
+  <ul class="dlist" id="dList"></ul>
+  <div style="text-align:center"><button class="ghost" id="dMore" hidden>さらに表示</button></div>
+  <div class="actions"><span></span><button class="btn" id="dClose" style="padding:8px 18px">閉じる</button></div>
+</div></div>
+
+<!-- 取り込み -->
+<div class="modal" id="mImport"><div class="sheet">
+  <h2>まとめて取り込み</h2>
+  <p class="hint">Google Keep のリストをコピーして貼り付けてください。1行が1タスクになります。URLだけの行は、直前のタスクのメモに入ります。チェック済み（☑）の行は取り込みません。</p>
+  <div class="f"><textarea id="iText" rows="10" placeholder="中川：垂水11月シフトの件確認&#10;RMS　新作業フローの確認"></textarea></div>
+  <div class="actions"><button class="ghost" id="iCancel">キャンセル</button><button class="btn" id="iRun" style="padding:8px 18px">取り込む</button></div>
+</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+// ---------- GAS との通信（google.script.run と同じ書き方で、インターネット越しに呼ぶ） ----------
+const CFG_KEY = 'taskApiConfig';
+function getCfg() { try { return JSON.parse(localStorage.getItem(CFG_KEY) || 'null'); } catch (e) { return null; } }
+function callApi(fn, args, cfg) {
+  cfg = cfg || getCfg();
+  if (!cfg) return Promise.reject(new Error('接続設定がありません（右上の⚙）'));
+  return fetch(cfg.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // 事前確認（CORS）を避けるため text/plain で送る
+    body: JSON.stringify({ key: cfg.key, fn: fn, args: args })
+  }).then(r => r.json()).then(r => {
+    if (!r.ok) throw new Error(r.error || '通信エラー');
+    return r.data;
+  });
+}
+window.google = { script: { get run() {
+  const o = {};
+  const p = new Proxy(o, { get(t, k) {
+    if (k === 'withSuccessHandler') return f => { o.s = f; return p; };
+    if (k === 'withFailureHandler') return f => { o.f = f; return p; };
+    return (...args) => callApi(k, args).then(d => o.s && o.s(d), e => o.f ? o.f(e) : console.error(e));
+  } });
+  return p;
+} } };
+
+// 前回の一覧を端末に覚えておき、開いた瞬間に表示する
+const CACHE_KEY = 'taskCache';
+let INIT = { tasks: [], people: [] };
+try { INIT = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null') || INIT; } catch (e) {}
+function saveCache() { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ tasks: tasks, people: people })); } catch (e) {} }
+let tasks = INIT.tasks || [];
+let people = INIT.people || [];
+const PRI_RANK = { A: 1, B: 2, C: 3, D: 4 };
+const $ = id => document.getElementById(id);
+const pending = {};   // 完了取り消し待ちのタスク id -> timer
+let editingId = null;
+let selectMode = false;
+const selected = new Set();
+
+// ---------- 表示設定の保存（端末ごと） ----------
+const view = { who: '__all', status: '__all', due: '__all', date: '', sort: 'manual' };
+try { Object.assign(view, JSON.parse(localStorage.getItem('taskView') || '{}')); } catch (e) {}
+function saveView() { try { localStorage.setItem('taskView', JSON.stringify(view)); } catch (e) {} }
+
+// ---------- サーバー呼び出し（順番に裏で実行） ----------
+let queue = Promise.resolve(), inflight = 0;
+function setSync() { $('sync').classList.toggle('busy', inflight > 0); }
+function run(fn, ...args) {
+  inflight++; setSync();
+  const p = queue.then(() => new Promise((res, rej) => {
+    google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args);
+  }));
+  queue = p.catch(() => {});
+  p.catch(e => toast('保存に失敗しました：' + (e && e.message || e)))
+   .finally(() => { inflight--; setSync(); });
+  return p;
+}
+window.addEventListener('beforeunload', e => { if (inflight > 0) { e.preventDefault(); e.returnValue = ''; } });
+
+// ---------- ユーティリティ ----------
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function linkify(s) {
+  const re = /https?:\/\/[A-Za-z0-9\-._~:\/?#\[\]@!$&'()*+,;=%]+/g;
+  let out = '', last = 0, m;
+  while ((m = re.exec(s))) {
+    out += esc(s.slice(last, m.index));
+    let label = 'リンク';
+    try { label = new URL(m[0]).hostname.replace(/^www\./, ''); } catch (e) {}
+    out += '<a href="' + esc(m[0]) + '" target="_blank" rel="noopener">' + esc(label) + '</a>';
+    last = re.lastIndex;
+  }
+  return out + esc(s.slice(last));
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function nowHM() { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+function todayStr() { return ymd(new Date()); }
+function tomorrowStr() { const d = new Date(); d.setDate(d.getDate() + 1); return ymd(d); }
+function mdw(s) {
+  const [y, m, d] = s.split('-').map(Number);
+  return m + '/' + d + '(' + '日月火水木金土'[new Date(y, m - 1, d).getDay()] + ')';
+}
+const byId = id => tasks.find(t => t.id === id);
+
+// 「名前：内容」→ 登録済みの名前なら依頼相手に振り分け
+// 「中川、辻：内容」のように複数人も可（全員が登録済みのときだけ振り分け）
+function parseLine(s) {
+  const m = s.match(/^([^：:\s]{1,40})\s*[：:]\s*([\s\S]+)$/);
+  const ns = m ? splitNames(m[1]) : [];
+  if (ns.length && ns.every(n => people.includes(n))) return { assignee: joinNames(ns), title: m[2].trim() };
+  return { title: s.trim() };
+}
+// 依頼相手（複数可）は「中川、辻」のように読点区切りで持つ
+function splitNames(s) { return String(s || '').split(/[、,，・]/).map(x => x.trim()).filter(x => x); }
+function joinNames(arr) { return [...new Set(arr)].join('、'); }
+function whoChips(t) { return splitNames(t.assignee).map(n => '<span class="who">' + esc(n) + '</span>').join(''); }
+
+function newTask(o) {
+  return Object.assign({
+    id: uid(), order: 0, title: '', due: '', time: '', notified: '', priority: '', status: '未着手',
+    assignee: '', memo: '', repeat: 'なし', created: '', updated: '', doneAt: '', cwTask: ''
+  }, o);
+}
+
+// ---------- 描画 ----------
+function allNames() {
+  const set = new Set(people);
+  tasks.forEach(t => splitNames(t.assignee).forEach(n => set.add(n)));
+  return [...set];
+}
+
+function renderFilters() {
+  const names = allNames();
+  if (view.who !== '__all' && view.who !== '__none' && !names.includes(view.who)) view.who = '__all';
+  $('fWho').innerHTML =
+    '<option value="__all">全員（相手なしも含む）</option><option value="__none">相手なしだけ</option>' +
+    names.map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('');
+  $('fWho').value = view.who;
+  $('fStatus').value = view.status;
+  $('fDue').value = view.due;
+  $('fDate').hidden = view.due !== 'pick';
+  $('fDate').value = view.date;
+  $('sortBy').value = view.sort;
+  $('dlPeople').innerHTML = people.map(n => '<option value="' + esc(n) + '">').join('');
+}
+
+function dueMatch(due) {
+  const today = todayStr(), tomorrow = tomorrowStr();
+  switch (view.due) {
+    case 'over': return !!due && due < today;
+    case 'today': return due === today;
+    case 'untilToday': return !!due && due <= today;
+    case 'tomorrow': return due === tomorrow;
+    case 'week': { const d = new Date(); d.setDate(d.getDate() + 7); return !!due && due >= today && due <= ymd(d); }
+    case 'dated': return !!due;
+    case 'none': return !due;
+    case 'pick': return !view.date || due === view.date;
+    default: return true;
+  }
+}
+
+function visibleTasks() {
+  let arr = tasks.filter(t => {
+    const ns = splitNames(t.assignee);
+    if (view.who === '__none' && ns.length) return false;
+    if (view.who !== '__all' && view.who !== '__none' && !ns.includes(view.who)) return false;
+    if (view.status !== '__all' && t.status !== view.status) return false;
+    if (!dueMatch(t.due)) return false;
+    return true;
+  });
+  const byOrder = (a, b) => a.order - b.order;
+  const dk = t => (t.due || '9999') + ' ' + (t.time || '99:99');
+  const byDue = (a, b) => dk(a) < dk(b) ? -1 : dk(a) > dk(b) ? 1 : 0;
+  const byPri = (a, b) => (PRI_RANK[a.priority] || 9) - (PRI_RANK[b.priority] || 9);
+  // 依頼相手順：登録した順 → 未登録の名前（五十音）→ 相手なし
+  const whoRank = n => { if (!n) return 1e9; const i = people.indexOf(n); return i < 0 ? 1e6 : i; };
+  const firstWho = t => { const ns = splitNames(t.assignee); return ns.length ? ns.reduce((m, n) => whoRank(n) < whoRank(m) ? n : m) : ''; };
+  const byWho = (a, b) => (whoRank(firstWho(a)) - whoRank(firstWho(b))) ||
+    firstWho(a).localeCompare(firstWho(b), 'ja') || (a.assignee || '').localeCompare(b.assignee || '', 'ja');
+  if (view.sort === 'manual') arr.sort(byOrder);
+  if (view.sort === 'due') arr.sort((a, b) => byDue(a, b) || byPri(a, b) || byOrder(a, b));
+  if (view.sort === 'pri') arr.sort((a, b) => byPri(a, b) || byDue(a, b) || byOrder(a, b));
+  if (view.sort === 'who') arr.sort((a, b) => byWho(a, b) || byOrder(a, b));
+  return arr;
+}
+
+function rowHtml(t) {
+  const today = todayStr(), tomorrow = tomorrowStr();
+  let dueCls = '', dueLabel = '';
+  if (t.due) {
+    dueLabel = mdw(t.due);
+    if (t.due < today) { dueCls = 'over'; dueLabel += ' 期限切れ'; }
+    else if (t.due === today) { dueCls = 'today'; dueLabel = '今日 ' + dueLabel; }
+    else if (t.due === tomorrow) dueLabel = '明日 ' + dueLabel;
+    if (t.time) {
+      dueLabel += ' ⏰' + esc(t.time);
+      if (t.due === today && t.time <= nowHM()) { dueCls = 'over'; dueLabel += ' 時刻を過ぎています'; }
+    }
+  }
+  const done = !!pending[t.id];
+  const stOpts = ['未着手', '進行中', '依頼済', '要確認', '作業', '完了']
+    .map(s => '<option' + (s === t.status ? ' selected' : '') + '>' + s + '</option>').join('');
+  const memoFirst = (t.memo || '').split('\n').find(s => s.trim()) || '';
+  const picked = selectMode && selected.has(t.id);
+  return '<li class="task' + (done ? ' done' : '') + (picked ? ' picked' : '') + '" data-id="' + esc(t.id) + '">' +
+    '<span class="handle">⠿</span>' +
+    (selectMode
+      ? '<input type="checkbox" class="sel"' + (picked ? ' checked' : '') + ' aria-label="選択">'
+      : '<input type="checkbox" class="chk"' + (done ? ' checked' : '') + ' aria-label="完了">') +
+    '<div class="body">' +
+      '<div class="title">' + linkify(t.title) + '</div>' +
+      '<div class="meta">' +
+        (t.priority ? '<span class="pri p' + t.priority + '">' + t.priority + '</span>' : '') +
+        '<select class="st st-' + esc(t.status) + '">' + stOpts + '</select>' +
+        whoChips(t) +
+        (dueLabel ? '<span class="due ' + dueCls + '">' + dueLabel + '</span>' : '') +
+        (t.repeat && t.repeat !== 'なし' ? '<span class="rep">↻' + esc(t.repeat) + '</span>' : '') +
+        (t.cwTask ? '<span class="cw" title="Chatworkのタスクから取り込み">CW</span>' : '') +
+      '</div>' +
+      (memoFirst ? '<div class="memo">' + linkify(memoFirst) + '</div>' : '') +
+    '</div></li>';
+}
+
+let sortable;
+function render() {
+  renderFilters();
+  const arr = visibleTasks();
+  if (selectMode) { // 見えていないタスクは選択から外す
+    const vis = new Set(arr.map(t => t.id));
+    [...selected].forEach(id => { if (!vis.has(id)) selected.delete(id); });
+  }
+  const list = $('list');
+  list.innerHTML = arr.map(rowHtml).join('');
+  $('empty').hidden = arr.length > 0;
+  const manual = view.sort === 'manual';
+  list.classList.toggle('nodrag', !manual);
+  list.classList.toggle('selecting', selectMode);
+  if (sortable) sortable.option('disabled', !manual || selectMode);
+  $('btnSortSave').hidden = manual || selectMode || !arr.length;
+  $('btnClear').hidden = view.who === '__all' && view.status === '__all' && view.due === '__all';
+  renderSelBar(arr.length);
+  saveCache();
+}
+
+// ---------- 並べ替え ----------
+function onReorder() {
+  const ids = [...$('list').children].map(li => li.dataset.id);
+  const visible = new Set(ids);
+  const full = tasks.slice().sort((a, b) => a.order - b.order);
+  let i = 0;
+  const merged = full.map(t => visible.has(t.id) ? byId(ids[i++]) : t); // 絞り込み中も、見えている分だけ入れ替え
+  merged.forEach((t, k) => { t.order = k; });
+  run('saveOrder', merged.map(t => t.id));
+}
+
+// 期限順・優先度順などで並んでいる今の順番を「手動順」として保存する
+function saveSortAsManual() {
+  const ids = visibleTasks().map(t => t.id);
+  const visible = new Set(ids);
+  const full = tasks.slice().sort((a, b) => a.order - b.order);
+  let i = 0;
+  const merged = full.map(t => visible.has(t.id) ? byId(ids[i++]) : t);
+  merged.forEach((t, k) => { t.order = k; });
+  view.sort = 'manual';
+  saveView();
+  render();
+  run('saveOrder', merged.map(t => t.id));
+  toast('今の並び順を手動順として保存しました');
+}
+
+// ---------- 選択モード（一括操作） ----------
+function setSelectMode(on) {
+  selectMode = on;
+  selected.clear();
+  document.body.classList.toggle('selmode', on);
+  $('btnSelect').classList.toggle('on', on);
+  render();
+}
+function renderSelBar(visibleCount) {
+  $('selbar').classList.toggle('show', selectMode);
+  if (!selectMode) return;
+  $('selCount').textContent = selected.size + '件選択';
+  // 一覧の上の「すべて選択」チェック：全部選択＝チェック、一部だけ＝途中（－）表示
+  const chk = $('selAllChk');
+  chk.checked = visibleCount > 0 && selected.size === visibleCount;
+  chk.indeterminate = selected.size > 0 && selected.size < visibleCount;
+  chk.disabled = visibleCount === 0;
+  $('selAllLabel').textContent = '表示中のタスクをすべて選択（' + visibleCount + '件）';
+  $('selDue').disabled = selected.size === 0;
+  $('selDue').style.opacity = selected.size ? '' : '.5';
+}
+function toggleSelect(id) {
+  if (selected.has(id)) selected.delete(id); else selected.add(id);
+  render();
+}
+function openBulk() {
+  if (!selected.size) return;
+  $('bCount').textContent = selected.size + '件';
+  const dues = [...selected].map(id => (byId(id) || {}).due || '');
+  $('bDate').value = dues.every(d => d === dues[0]) ? dues[0] : '';
+  openModal('mBulk');
+}
+function addDaysStr(s, n) {
+  const [y, m, d] = s.split('-').map(Number);
+  return ymd(new Date(y, m - 1, d + n));
+}
+function applyBulk(fn, label) {
+  const list = [...selected].map(byId).filter(Boolean);
+  if (!list.length) return;
+  list.forEach(t => { t.due = fn(t); });
+  closeModal('mBulk');
+  setSelectMode(false);
+  run('updateTasks', list);
+  toast(list.length + '件の期限を' + label + 'にしました');
+}
+
+// ---------- 追加 ----------
+function topOrder() { return tasks.reduce((m, t) => Math.min(m, t.order), 0) - 1; }
+
+function quickAdd() {
+  const v = $('quick').value.trim();
+  if (!v) return;
+  const t = newTask(Object.assign(parseLine(v), { order: topOrder() }));
+  if (view.who !== '__all' && view.who !== '__none' && !t.assignee) t.assignee = view.who; // 相手で絞り込み中ならその人を入れる
+  // 期限で絞り込み中なら、その日付を期限に入れる
+  if (view.due === 'today' || view.due === 'untilToday') t.due = todayStr();
+  if (view.due === 'tomorrow') t.due = tomorrowStr();
+  if (view.due === 'pick' && view.date) t.due = view.date;
+  if (view.status !== '__all') t.status = view.status;
+  tasks.push(t);
+  $('quick').value = '';
+  render();
+  run('saveTask', t);
+  if (!visibleTasks().includes(t)) toast('追加しました（今の絞り込みでは表示されません）');
+}
+
+// ---------- 完了（4秒間は取り消し可能） ----------
+function complete(id) {
+  if (pending[id]) return;
+  pending[id] = setTimeout(() => finalize(id), 4000);
+  render();
+  toast('完了にしました', '元に戻す', () => undo(id));
+}
+function undo(id) {
+  if (!pending[id]) return;
+  clearTimeout(pending[id]);
+  delete pending[id];
+  render();
+}
+function finalize(id) {
+  delete pending[id];
+  tasks = tasks.filter(t => t.id !== id);
+  render();
+  run('completeTask', id).then(r => {
+    if (r && r.next) {
+      r.next.order = Number(r.next.order) || 0;
+      tasks.push(r.next);
+      render();
+      toast('次回分を作成しました（' + mdw(r.next.due) + '）');
+    }
+  });
+}
+// アプリを閉じる・切り替える時は、取り消し待ちをすぐ確定
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) Object.keys(pending).forEach(id => { clearTimeout(pending[id]); finalize(id); });
+  else refresh();
+});
+
+// 画面に戻ってきたとき、最新のタスクを読み直す（Chatworkから追加した分や、別の端末での変更を反映）
+let lastRefresh = Date.now();
+function refresh(withCw, force) {
+  if (!force && Date.now() - lastRefresh < 15000) return;
+  if (selectMode || inflight > 0 || Object.keys(pending).length || document.querySelector('.modal.open')) return;
+  lastRefresh = Date.now();
+  google.script.run.withSuccessHandler(d => {
+    if (inflight > 0 || Object.keys(pending).length || document.querySelector('.modal.open')) return;
+    tasks = (d.tasks || []).map(t => Object.assign(t, { order: Number(t.order) || 0 }));
+    people = d.people || [];
+    render();
+    if (withCw) toast('Chatworkのタスクも確認して、最新の状態にしました');
+  }).withFailureHandler(e => toast('最新の状態を取得できませんでした：' + (e && e.message || e)))[withCw ? 'syncAndGetData' : 'getData']();
+}
+
+// ---------- トースト ----------
+let toastTimer;
+function toast(msg, btnLabel, onBtn) {
+  $('toastMsg').textContent = msg;
+  const b = $('toastBtn');
+  b.textContent = btnLabel || '';
+  b.style.display = btnLabel ? '' : 'none';
+  b.onclick = () => { $('toast').classList.remove('show'); if (onBtn) onBtn(); };
+  $('toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').classList.remove('show'), 4000);
+}
+
+// ---------- 編集 ----------
+function openModal(id) { $(id).classList.add('open'); }
+function closeModal(id) { $(id).classList.remove('open'); }
+
+function renderWhoChips() {
+  const cur = splitNames($('eWho').value);
+  $('eWhoChips').innerHTML = people.map(n =>
+    '<button type="button" class="chip' + (cur.includes(n) ? ' on' : '') + '" data-name="' + esc(n) + '">' + esc(n) + '</button>'
+  ).join('');
+}
+
+function openEditor(id) {
+  const t = byId(id);
+  if (!t) return;
+  editingId = id;
+  $('eTitle').value = t.title;
+  $('eWho').value = t.assignee;
+  $('eDue').value = t.due;
+  $('eTime').value = t.time || '';
+  $('ePri').value = t.priority;
+  $('eStatus').value = t.status;
+  $('eRepeat').value = t.repeat || 'なし';
+  $('eMemo').value = t.memo;
+  renderWhoChips();
+  openModal('mEdit');
+}
+
+function saveEditor() {
+  const t = byId(editingId);
+  if (!t) return closeModal('mEdit');
+  const title = $('eTitle').value.trim();
+  if (!title) { toast('タイトルを入力してください'); return; }
+  const status = $('eStatus').value;
+  const time = $('eTime').value;
+  let due = $('eDue').value;
+  if (time && !due) { due = todayStr(); toast('時刻だけなので、期限を今日にしました'); }
+  Object.assign(t, {
+    title: title,
+    assignee: joinNames(splitNames($('eWho').value)),
+    due: due,
+    time: time,
+    priority: $('ePri').value,
+    status: status === '完了' ? t.status : status,
+    repeat: $('eRepeat').value,
+    memo: $('eMemo').value
+  });
+  closeModal('mEdit');
+  render();
+  run('saveTask', t);
+  if (status === '完了') complete(t.id);
+}
+
+function deleteEditing() {
+  const t = byId(editingId);
+  if (!t || !confirm('このタスクを削除しますか？')) return;
+  tasks = tasks.filter(x => x.id !== t.id);
+  closeModal('mEdit');
+  render();
+  run('deleteTask', t.id);
+}
+
+// ---------- 依頼相手の管理 ----------
+function renderPeople() {
+  $('pList').innerHTML = people.map((n, i) =>
+    '<li data-name="' + esc(n) + '"><span class="phandle">⠿</span><span class="pname">' + esc(n) + '</span>' +
+    '<button type="button" class="pedit" data-edit="' + i + '">修正</button>' +
+    '<button type="button" data-del="' + i + '">削除</button></li>'
+  ).join('') || '<li class="hint">まだ登録がありません</li>';
+}
+function startRename(i) {
+  const li = $('pList').querySelectorAll('li[data-name]')[i];
+  if (!li) return;
+  const span = li.querySelector('.pname');
+  const inp = document.createElement('input');
+  inp.className = 'prename';
+  inp.value = people[i];
+  span.replaceWith(inp);
+  li.querySelector('.pedit').textContent = '確定';
+  inp.focus();
+  inp.select();
+  let done = false;
+  const finish = ok => {
+    if (done) return;
+    done = true;
+    if (ok) commitRename(i, inp.value); else renderPeople();
+  };
+  inp.addEventListener('keydown', e => {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  inp.addEventListener('blur', () => finish(true));
+}
+function commitRename(i, value) {
+  const oldName = people[i], newName = String(value).trim();
+  if (!newName || newName === oldName) { renderPeople(); return; }
+  if (people.includes(newName)) { toast('「' + newName + '」は既に登録されています'); renderPeople(); return; }
+  people[i] = newName;
+  tasks.forEach(t => { // 既存タスクの依頼相手も置き換え
+    const ns = splitNames(t.assignee);
+    if (ns.includes(oldName)) t.assignee = joinNames(ns.map(n => n === oldName ? newName : n));
+  });
+  if (view.who === oldName) { view.who = newName; saveView(); }
+  renderPeople();
+  render();
+  run('renamePerson', oldName, newName, people.slice());
+}
+function onPeopleReorder() {
+  people = [...$('pList').querySelectorAll('li[data-name]')].map(li => li.dataset.name);
+  renderPeople();
+  run('setPeople', people.slice());
+}
+// 「中川、辻、福田」のように区切って入れると、まとめて登録できる
+function addPerson() {
+  const add = splitNames($('pNew').value.replace(/[\s　]+/g, '、')).filter(n => !people.includes(n));
+  $('pNew').value = '';
+  if (!add.length) return;
+  people.push(...new Set(add));
+  renderPeople();
+  run('setPeople', people.slice());
+  if (add.length > 1) toast(add.length + '人を登録しました');
+}
+
+// ---------- 完了済み ----------
+const DONE_PAGE = 50;
+let doneItems = [], doneTotal = 0, doneSeq = 0, doneTimer;
+
+function openDone() {
+  const names = allNames();
+  $('dWho').innerHTML = '<option value="">全員</option>' +
+    names.map(n => '<option value="' + esc(n) + '">' + esc(n) + '</option>').join('');
+  $('dQuery').value = '';
+  openModal('mDone');
+  loadDone(true);
+}
+
+function loadDone(reset) {
+  const seq = ++doneSeq;
+  if (reset) { doneItems = []; $('dList').innerHTML = '<li class="hint">読み込み中…</li>'; }
+  $('dMore').hidden = true;
+  google.script.run.withSuccessHandler(r => {
+    if (seq !== doneSeq) return; // 古い検索結果は捨てる
+    doneItems = doneItems.concat(r.items);
+    doneTotal = r.total;
+    renderDone();
+  }).withFailureHandler(e => toast('読み込みに失敗しました：' + (e && e.message || e)))
+    .getDone($('dQuery').value, $('dWho').value, doneItems.length, DONE_PAGE);
+}
+
+function renderDone() {
+  $('dCount').textContent = doneTotal + '件';
+  $('dList').innerHTML = doneItems.map(t =>
+    '<li data-id="' + esc(t.id) + '"><div class="dbody">' +
+      '<div class="dtitle">' + linkify(t.title) + '</div>' +
+      '<div class="dmeta">' +
+        '<span>✔ ' + esc(t.doneAt ? t.doneAt.slice(5).replace('-', '/') : '') + '</span>' +
+        whoChips(t) +
+        (t.due ? '<span>期限 ' + mdw(t.due) + (t.time ? ' ' + esc(t.time) : '') + '</span>' : '') +
+        (t.priority ? '<span>優先度 ' + esc(t.priority) + '</span>' : '') +
+        (t.repeat && t.repeat !== 'なし' ? '<span>↻' + esc(t.repeat) + '</span>' : '') +
+      '</div>' +
+    '</div><button type="button" class="reopen">未完了に戻す</button></li>'
+  ).join('') || '<li class="hint">完了済みのタスクはありません</li>';
+  $('dMore').hidden = doneItems.length >= doneTotal;
+}
+
+function reopen(id) {
+  const li = $('dList').querySelector('li[data-id="' + CSS.escape(id) + '"]');
+  if (li) li.style.opacity = '.4';
+  run('reopenTask', id).then(r => {
+    doneItems = doneItems.filter(t => t.id !== id);
+    doneTotal = Math.max(0, doneTotal - 1);
+    renderDone();
+    if (!r) return;
+    r.task.order = Number(r.task.order) || 0;
+    tasks.push(r.task);
+    render();
+    toast(r.wasRepeat ? '未完了に戻しました（繰り返しは次回分に残っているので、こちらは繰り返しなしにしました）' : '未完了に戻しました');
+  }, () => { if (li) li.style.opacity = ''; });
+}
+
+// ---------- 取り込み ----------
+function runImport() {
+  const out = [];
+  $('iText').value.split(/\r?\n/).forEach(raw => {
+    if (/^\s*(☑|✅|\[x\])/i.test(raw)) return; // チェック済みは除外
+    const s = raw.replace(/^\s*(☐|□|■|・|-|\*|\[ \])\s*/, '').trim();
+    if (!s) return;
+    if (/^https?:\/\/\S+$/.test(s) && out.length) {
+      const p = out[out.length - 1];
+      p.memo = p.memo ? p.memo + '\n' + s : s;
+      return;
+    }
+    out.push(newTask(parseLine(s)));
+  });
+  if (!out.length) { toast('取り込むタスクがありません'); return; }
+  let base = tasks.reduce((m, t) => Math.max(m, t.order), 0) + 1;
+  out.forEach(t => { t.order = base++; });
+  tasks = tasks.concat(out);
+  $('iText').value = '';
+  closeModal('mImport');
+  render();
+  run('saveTasks', out);
+  toast(out.length + '件を取り込みました');
+}
+
+// ---------- イベント ----------
+$('btnAdd').onclick = quickAdd;
+$('hTitle').onclick = () => { lastRefresh = 0; toast('読み込み中…'); refresh(true); };
+$('quick').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); quickAdd(); }
+});
+$('fWho').onchange = e => { view.who = e.target.value; saveView(); render(); };
+$('fStatus').onchange = e => { view.status = e.target.value; saveView(); render(); };
+$('fDue').onchange = e => {
+  view.due = e.target.value;
+  if (view.due === 'pick' && !view.date) view.date = todayStr();
+  saveView(); render();
+};
+$('fDate').onchange = e => { view.date = e.target.value; saveView(); render(); };
+$('sortBy').onchange = e => { view.sort = e.target.value; saveView(); render(); };
+
+$('list').addEventListener('change', e => {
+  const li = e.target.closest('li.task');
+  if (!li) return;
+  const id = li.dataset.id;
+  if (e.target.classList.contains('sel')) { toggleSelect(id); return; }
+  if (e.target.classList.contains('chk')) {
+    if (e.target.checked) complete(id); else undo(id);
+  } else if (e.target.classList.contains('st')) {
+    const v = e.target.value;
+    if (v === '完了') { complete(id); return; }
+    const t = byId(id);
+    t.status = v;
+    render();
+    run('saveTask', t);
+  }
+});
+$('list').addEventListener('click', e => {
+  if (e.target.closest('a, input, select, .handle')) return;
+  const li = e.target.closest('li.task');
+  if (li && selectMode) { toggleSelect(li.dataset.id); return; } // 選択モード中は行タップで選択
+  if (li && !pending[li.dataset.id]) openEditor(li.dataset.id);
+});
+
+$('eSave').onclick = saveEditor;
+$('eTimeClear').onclick = () => { $('eTime').value = ''; };
+$('eCancel').onclick = () => closeModal('mEdit');
+$('eDelete').onclick = deleteEditing;
+$('eWho').addEventListener('input', renderWhoChips);
+$('eWhoChips').addEventListener('click', e => {
+  const b = e.target.closest('.chip');
+  if (!b) return;
+  const ns = splitNames($('eWho').value), n = b.dataset.name; // タップで追加／外す（複数選べる）
+  $('eWho').value = joinNames(ns.includes(n) ? ns.filter(x => x !== n) : ns.concat(n));
+  renderWhoChips();
+});
+
+$('btnPeople').onclick = () => { renderPeople(); openModal('mPeople'); };
+$('pAdd').onclick = addPerson;
+$('pNew').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); addPerson(); }
+});
+$('pList').addEventListener('click', e => {
+  const ed = e.target.closest('button[data-edit]');
+  if (ed) {
+    const inp = $('pList').querySelector('.prename');
+    if (inp) inp.blur();                         // 入力中なら「確定」として保存
+    else startRename(Number(ed.dataset.edit));
+    return;
+  }
+  const b = e.target.closest('button[data-del]');
+  if (!b) return;
+  const name = people[Number(b.dataset.del)];
+  if (!confirm('「' + name + '」を登録から削除しますか？\n（既存タスクの依頼相手はそのまま残ります）')) return;
+  people.splice(Number(b.dataset.del), 1);
+  renderPeople();
+  run('setPeople', people.slice());
+});
+// 「確定」ボタンを押したとき、入力欄の blur より先にボタンが消えないようにする
+$('pList').addEventListener('mousedown', e => { if (e.target.closest('.pedit') && $('pList').querySelector('.prename')) e.preventDefault(); });
+$('pClose').onclick = () => { closeModal('mPeople'); render(); };
+
+$('btnDone').onclick = openDone;
+$('btnSelect').onclick = () => setSelectMode(!selectMode);
+$('selExit').onclick = () => setSelectMode(false);
+$('selAllChk').onchange = e => {
+  if (e.target.checked) visibleTasks().forEach(t => selected.add(t.id)); else selected.clear();
+  render();
+};
+$('selNone').onclick = () => { selected.clear(); render(); };
+$('selDue').onclick = openBulk;
+$('btnSortSave').onclick = saveSortAsManual;
+$('btnClear').onclick = () => { view.who = '__all'; view.status = '__all'; view.due = '__all'; saveView(); render(); };
+$('bCancel').onclick = () => closeModal('mBulk');
+$('bApply').onclick = () => {
+  const v = $('bDate').value;
+  if (!v) { toast('日付を選んでください'); return; }
+  applyBulk(() => v, mdw(v));
+};
+$('mBulk').addEventListener('click', e => {
+  const b = e.target.closest('.chip');
+  if (!b) return;
+  const today = todayStr();
+  if (b.dataset.shift) {
+    const n = Number(b.dataset.shift);
+    applyBulk(t => addDaysStr(t.due || today, n), (n > 0 ? n + '日後ろ' : -n + '日前'));
+    return;
+  }
+  const set = b.dataset.set;
+  if (set === 'none') { [...selected].forEach(id => { const t = byId(id); if (t) t.time = ''; }); applyBulk(() => '', '「期限なし」'); return; }
+  let v = today;
+  if (set === 'tomorrow') v = addDaysStr(today, 1);
+  if (set === 'after2') v = addDaysStr(today, 2);
+  if (set === 'nextmon') { const dow = new Date().getDay(); v = addDaysStr(today, ((8 - dow) % 7) || 7); }
+  applyBulk(() => v, mdw(v));
+});
+$('dClose').onclick = () => closeModal('mDone');
+$('dMore').onclick = () => loadDone(false);
+$('dWho').onchange = () => loadDone(true);
+$('dQuery').addEventListener('input', () => { clearTimeout(doneTimer); doneTimer = setTimeout(() => loadDone(true), 400); });
+$('dList').addEventListener('click', e => {
+  const b = e.target.closest('.reopen');
+  if (b) reopen(b.closest('li').dataset.id);
+});
+$('btnImport').onclick = () => openModal('mImport');
+$('iCancel').onclick = () => closeModal('mImport');
+$('iRun').onclick = runImport;
+
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => {
+  if (e.target === m) { m.classList.remove('open'); if (m.id === 'mPeople') render(); }
+}));
+
+// ---------- 起動 ----------
+tasks.forEach(t => { t.order = Number(t.order) || 0; });
+if (window.Sortable) {
+  sortable = Sortable.create($('list'), { handle: '.handle', animation: 150, onEnd: onReorder });
+  Sortable.create($('pList'), { handle: '.phandle', animation: 150, draggable: 'li[data-name]', onEnd: onPeopleReorder });
+}
+render();
+
+// ---------- 起動時：設定がなければ初回設定、あれば最新を取得 ----------
+function openSetup() {
+  const c = getCfg() || {};
+  $('sUrl').value = c.url || '';
+  $('sKey').value = c.key || '';
+  openModal('mSetup');
+}
+$('btnSetup').onclick = openSetup;
+$('sCancel').onclick = () => closeModal('mSetup');
+$('sSave').onclick = () => {
+  const cfg = { url: $('sUrl').value.trim(), key: $('sKey').value.trim() };
+  if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(cfg.url)) { toast('URLは https://script.google.com/…/exec の形で入れてください'); return; }
+  if (!cfg.key) { toast('合言葉を入れてください'); return; }
+  $('sSave').disabled = true;
+  callApi('getData', [], cfg).then(d => {
+    localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
+    tasks = (d.tasks || []).map(t => Object.assign(t, { order: Number(t.order) || 0 }));
+    people = d.people || [];
+    closeModal('mSetup');
+    render();
+    toast('接続できました（' + tasks.length + '件）');
+  }, e => toast('接続できませんでした：' + e.message)).finally(() => { $('sSave').disabled = false; });
+};
+if (getCfg()) { toast('読み込み中…'); refresh(false, true); } else openSetup();
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
